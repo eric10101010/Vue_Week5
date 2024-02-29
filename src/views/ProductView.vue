@@ -16,7 +16,7 @@
                     </tr>
                 </thead>
                 <tbody>
-                    <tr v-for="product in products" :key="product.key">
+                    <tr v-for="product in products" :key="product.id">
                         <td style="width: 200px">
                             <div
                                 style="
@@ -57,9 +57,11 @@
             </table>
             <!-- 購物車列表 -->
             <div class="text-end mt-4">
-                <button class="btn btn-outline-danger" type="button" @click="delCartAll()">清空購物車</button>
+                <button class="btn btn-outline-danger" type="button" @click="delCartAll()"
+                :disabled="carts.carts.length === 0">
+                清空購物車</button>
             </div>
-            <table class="table align-middle mt-4">
+            <table class="table align-middle mt-4" v-if="carts.carts.length !== 0">
                 <thead>
                     <tr>
                         <th></th>
@@ -128,6 +130,9 @@
                     </tr>
                 </tfoot>
             </table>
+            <div class="mt-3" v-else>
+                <h3 class="text-danger text-center">目前購物車是空的</h3>
+            </div>
         </div>
         <div class="my-5 row justify-content-center">
             <VeeForm ref="form" class="col-md-6" v-slot="{ errors }" @submit="createOrder">
