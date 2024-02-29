@@ -1,5 +1,10 @@
 <template>
     <div class="container">
+        <loading v-model:active="isLoading">
+            <div class="loadingio-spinner-spin-pqarappzpn"><div class="ldio-eviqoo58lam">
+            <div><div></div></div><div><div></div></div><div><div></div></div><div><div></div></div><div><div></div></div><div><div></div></div><div><div></div></div><div><div></div></div>
+            </div></div>
+        </loading>
         <div class="mt-4">
             <table class="table align-middle">
                 <thead>
@@ -91,7 +96,7 @@
                                         <path d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4zM2.5 3h11V2h-11z"/>
                                         </svg>
                                     </button>
-                                    <input min="1" type="number" class="form-control text-center" v-model="cart.qty" 
+                                    <input type="number" id="cartNumber" class="form-control text-center" v-model="cart.qty" 
                                     :disabled="cart.id === status.cartQtyLoading" readonly/>
                                     <button type="button" class="border border-primary"  @click="cart.qty++; editCart(cart, cart.qty)">
                                         +
@@ -124,6 +129,47 @@
                 </tfoot>
             </table>
         </div>
+        <div class="my-5 row justify-content-center">
+            <VeeForm ref="form" class="col-md-6" v-slot="{ errors }" @submit="createOrder">
+                <div class="mb-3">
+                    <label for="email" class="form-label">Email</label>
+                    <VeeField id="email" name="email" type="email" class="form-control" :class="{ 'is-invalid': errors['email'] }"
+                            placeholder="請輸入Email" rules="email|required" v-model="form.user.email" autocomplete="off">
+                    </VeeField>
+                    <Error-message name="email" class="invalid-feedback"></Error-message>
+                </div>
+                <div class="mb-3">
+                    <label for="name" class="form-label">收件人姓名</label>
+                    <VeeField id="name" name="姓名" type="text" class="form-control" :class="{ 'is-invalid': errors['姓名'] }"
+                            placeholder="請輸入姓名" rules="required" v-model="form.user.name" autocomplete="off">
+                    </VeeField>
+                    <Error-message name="姓名" class="invalid-feedback"></Error-message>
+                </div>
+                <div class="mb-3">
+                    <label for="tel" class="form-label">收件人電話</label>
+                    <VeeField id="tel" name="電話" type="tel" class="form-control" :class="{ 'is-invalid': errors['電話'] }"
+                            placeholder="請輸入電話" :rules="isPhone"  v-model="form.user.tel" autocomplete="off">
+                    </VeeField>
+                    <Error-message name="電話" class="invalid-feedback"></Error-message>
+                </div>
+                <div class="mb-3">
+                    <label for="address" class="form-label">收件人地址</label>
+                    <VeeField id="address" name="地址" type="text" class="form-control" :class="{ 'is-invalid': errors['地址'] }"
+                            placeholder="請輸入地址" rules="required" v-model="form.user.address" autocomplete="off">
+                    </VeeField>
+                    <Error-message name="地址" class="invalid-feedback"></Error-message>
+                </div>
+                <div class="mb-3">
+                    <label for="message" class="form-label">留言</label>
+                    <textarea id="message" class="form-control" cols="30" rows="10" v-model="form.message" autocomplete="off"></textarea>
+                </div>
+                <div class="text-end">
+                    <button type="submit" class="btn btn-danger">
+                        送出訂單
+                    </button>
+                </div>
+            </VeeForm>
+        </div>
     </div>
     <ProductModal :temp-product="tempProduct" :add-cart="addCart" ref="ProductModal"></ProductModal>
 </template>
@@ -132,6 +178,9 @@
 
 import axios from 'axios';
 import ProductModal from '../components/ProductModal.vue';
+import Loading from 'vue-loading-overlay';
+import Swal from 'sweetalert2';
+
 const { VITE_API, VITE_PATH } = import.meta.env
 
 
@@ -140,8 +189,16 @@ export default {
         return {
             products: [],
             tempProduct: {},
-            carts: {
-                
+            carts: {},
+            isLoading: false,
+            form: {
+                user: {
+                    name: '',
+                    email: '',
+                    tel: '',
+                    address: '',
+                },
+                message: '',
             },
             status: {
                 addCartLoading: '',
@@ -152,9 +209,12 @@ export default {
     methods: {
         getProducts() {
             const api =`${VITE_API}/api/${VITE_PATH}/products/all`;
+            const vm = this;
+            vm.isLoading = true;
                 axios.get(api)
                     .then(res => {
                         this.products = res.data.products;
+                        vm.isLoading = false;
                         // console.log(res.data);
                     })
                     .catch(err => {
@@ -175,13 +235,23 @@ export default {
             const api =`${VITE_API}/api/${VITE_PATH}/cart`;
                 axios.post(api, {data: order})
                     .then(res => {
-                        console.log(res.data);
+                        const name = res.data.data.product.title;
                         this.status.addCartLoading = '';
+                        Swal.fire({
+                                title: `成功加入 ${name} 到購物車`,
+                                icon: 'success',
+                                confirmButtonText: '確認'
+                        })
                         this.getCart();
                         this.$refs.ProductModal.hideModal();
                     })
                     .catch(err => {
-                        console.log(err.response.data);
+                        console.log(err.res.data);
+                        Swal.fire({
+                                title: `加入購物車失敗`,
+                                icon: 'error',
+                                confirmButtonText: '確認'
+                        })
                     });
         },
         getCart() {
@@ -217,12 +287,22 @@ export default {
             const api =`${VITE_API}/api/${VITE_PATH}/cart/${id}`;
                 axios.delete(api)
                     .then(res => {
-                        console.log(res);
+                        let message = res.data.message;
                         this.status.cartQtyLoading = '';
+                        Swal.fire({
+                                title: `商品${message}`,
+                                icon: 'success',
+                                confirmButtonText: '確認'
+                        })
                         this.getCart();
                     })
                     .catch(err => {
                         console.log(err.response.data);
+                        Swal.fire({
+                                title: `刪除失敗`,
+                                icon: 'error',
+                                confirmButtonText: '確認'
+                        })
                     });
         },
         delCartAll() {
@@ -230,15 +310,45 @@ export default {
                 axios.delete(api)
                     .then(res => {
                         // console.log(res);
+                        Swal.fire({
+                                title: `成功清空購物車`,
+                                icon: 'success',
+                                confirmButtonText: '確認'
+                        })
                         this.getCart();
                     })
                     .catch(err => {
                         console.log(err.response.data);
                     });
+        },
+        createOrder() {
+            // this.isLoading = true;
+            const api =`${VITE_API}/api/${VITE_PATH}/order`;
+            const order = this.form;
+                axios.post(api, { data: order }).then((res) => {
+                    // this.$router.push(`/user/checkout/${response.data.orderId}`);
+                    this.$refs.form.resetForm();
+                    this.getCart();
+                    // this.isLoading = false;
+            }).catch((err) => {
+                console.dir(err);
+            });
+        },
+        isPhone(value) {
+            const phoneNumber = /^(09)[0-9]{8}$/
+            return phoneNumber.test(value) ? true : '需要正確的電話號碼'
         }
     },
     components: {
         ProductModal,
+        Loading,
+        Swal
+    },
+    computed: {
+        checkData() {
+            const attrs = ['name', 'email', 'tel', 'address'];
+            return attrs.every((item) => this.form.user[item] !== '');
+        },
     },
     mounted() {
         this.getProducts();
@@ -246,3 +356,105 @@ export default {
     }
 }
 </script>
+
+<style type="text/css">
+    @keyframes ldio-eviqoo58lam {
+        0% {
+            opacity: 1;
+            backface-visibility: hidden;
+            transform: translateZ(0) scale(1.5,1.5);
+        } 100% {
+            opacity: 0;
+            backface-visibility: hidden;
+            transform: translateZ(0) scale(1,1);
+        }
+    }
+    .ldio-eviqoo58lam div > div {
+        position: absolute;
+        width: 24px;
+        height: 24px;
+        border-radius: 50%;
+        background: #3e6d8d;
+        animation: ldio-eviqoo58lam 1s linear infinite;
+    }.ldio-eviqoo58lam div:nth-child(1) > div {
+        left: 148px;
+        top: 88px;
+        animation-delay: -0.875s;
+    }
+    .ldio-eviqoo58lam > div:nth-child(1) {
+        transform: rotate(0deg);
+        transform-origin: 160px 100px;
+    }.ldio-eviqoo58lam div:nth-child(2) > div {
+        left: 130px;
+        top: 130px;
+        animation-delay: -0.75s;
+    }
+    .ldio-eviqoo58lam > div:nth-child(2) {
+        transform: rotate(45deg);
+        transform-origin: 142px 142px;
+    }.ldio-eviqoo58lam div:nth-child(3) > div {
+        left: 88px;
+        top: 148px;
+        animation-delay: -0.625s;
+    }
+    .ldio-eviqoo58lam > div:nth-child(3) {
+        transform: rotate(90deg);
+        transform-origin: 100px 160px;
+    }.ldio-eviqoo58lam div:nth-child(4) > div {
+        left: 46px;
+        top: 130px;
+        animation-delay: -0.5s;
+    }
+    .ldio-eviqoo58lam > div:nth-child(4) {
+        transform: rotate(135deg);
+        transform-origin: 58px 142px;
+    }.ldio-eviqoo58lam div:nth-child(5) > div {
+        left: 28px;
+        top: 88px;
+        animation-delay: -0.375s;
+    }
+    .ldio-eviqoo58lam > div:nth-child(5) {
+        transform: rotate(180deg);
+        transform-origin: 40px 100px;
+    }.ldio-eviqoo58lam div:nth-child(6) > div {
+        left: 46px;
+        top: 46px;
+        animation-delay: -0.25s;
+    }
+    .ldio-eviqoo58lam > div:nth-child(6) {
+        transform: rotate(225deg);
+        transform-origin: 58px 58px;
+    }.ldio-eviqoo58lam div:nth-child(7) > div {
+        left: 88px;
+        top: 28px;
+        animation-delay: -0.125s;
+    }
+    .ldio-eviqoo58lam > div:nth-child(7) {
+        transform: rotate(270deg);
+        transform-origin: 100px 40px;
+    }.ldio-eviqoo58lam div:nth-child(8) > div {
+        left: 130px;
+        top: 46px;
+        animation-delay: 0s;
+    }
+    .ldio-eviqoo58lam > div:nth-child(8) {
+        transform: rotate(315deg);
+        transform-origin: 142px 58px;
+    }
+    .loadingio-spinner-spin-pqarappzpn {
+        width: 200px;
+        height: 200px;
+        display: inline-block;
+        overflow: hidden;
+        background: transparent;
+    }
+    .ldio-eviqoo58lam {
+        width: 100%;
+        height: 100%;
+        position: relative;
+        transform: translateZ(0) scale(1);
+        backface-visibility: hidden;
+      transform-origin: 0 0; /* see note above */
+    }
+    .ldio-eviqoo58lam div { box-sizing: content-box; }
+</style>

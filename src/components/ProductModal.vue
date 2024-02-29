@@ -26,7 +26,7 @@
                                 <div class="h5" v-if="tempProduct.price">現在只要 {{ tempProduct.price }} 元</div>
                                 <div>
                                     <div class="input-group">
-                                        <select name="" id="" class="form-select" v-model.number="qty" min="1">
+                                        <select name="cartItem" id="cartItem" class="form-select" v-model.number="qty" min="1">
                                             <option :value="i" v-for="i in 20" :key="i">
                                                 {{ i }}
                                             </option>
